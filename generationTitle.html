@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Excel 文件解析与导出</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+    }
+    input, button {
+      margin: 10px 0;
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    pre {
+      background-color: #f4f4f4;
+      padding: 10px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Excel 文件解析与导出</h1>
+
+    <!-- 文件选择 -->
+    <label for="fileInput">选择 Excel 文件：</label>
+    <input type="file" id="fileInput" accept=".xlsx, .xls" />
+
+    <!-- 显示解析结果 -->
+    <h2>解析结果：</h2>
+    <pre id="output"></pre>
+
+    <!-- 导出按钮 -->
+    <button id="exportBtn" disabled>导出为 XLSX</button>
+  </div>
+  
+  <script src="./scripts/generateTitles.js"></script>
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const output = document.getElementById('output');
+    const exportBtn = document.getElementById('exportBtn');
+
+    let parsedData = null;
+
+    // 文件选择事件
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+
+          // 解析为 JSON
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          const headers = jsonData[0];
+          const result = {};
+
+          headers.forEach(header => {
+            result[header] = [];
+          });
+
+          for (let i = 1; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            headers.forEach((header, colIndex) => {
+              const cellValue = row[colIndex];
+              if (cellValue !== undefined) {
+                result[header].push(cellValue.toString().trim());
+              }
+            });
+          }
+
+          parsedData = generateTitles(result);
+          output.textContent = JSON.stringify(parsedData, null, 2);
+          exportBtn.disabled = false;
+        } catch (error) {
+          output.textContent = `解析失败：${error.message}`;
+          exportBtn.disabled = true;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+
+    // 导出按钮事件
+    exportBtn.addEventListener('click', () => {
+      if (!parsedData) return;
+
+      // 创建新的工作簿
+      const newWorkbook = XLSX.utils.book_new();
+
+      // 将解析后的数据转换回二维数组
+      const headers = Object.keys(parsedData);
+      const rows = [headers]; // 第一行是表头
+      const maxLength = Math.max(...headers.map(header => parsedData[header].length));
+
+      for (let i = 0; i < maxLength; i++) {
+        const row = headers.map(header => parsedData[header][i] || '');
+        rows.push(row);
+      }
+
+      // 创建工作表
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+
+      // 添加到工作簿
+      XLSX.utils.book_append_sheet(newWorkbook, worksheet, 'Sheet1');
+
+      // 导出文件
+      XLSX.writeFile(newWorkbook, '导出文件.xlsx');
+    });
+  </script>
+</body>
+</html>
