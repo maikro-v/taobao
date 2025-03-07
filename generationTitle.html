@@ -45,7 +45,7 @@
     <button id="exportBtn" disabled>导出为 XLSX</button>
   </div>
   
-  <script src="./scripts/generateTitles.js"></script>
+  <script src="./scripts/generateTitles-v4.js"></script>
   <script>
     const fileInput = document.getElementById('fileInput');
     const output = document.getElementById('output');
@@ -85,7 +85,21 @@
             });
           }
 
-          parsedData = generateTitles(result);
+          parsedData = generateTitles(result, {
+              key: {
+                  '植物名': 'primary',  // 主词
+                  '功能词': 'fill',     // 动态截断
+                  '属性词': 2,          // 选2个
+                  '场景词': 1,          // 选1个
+                  '促销词': 1           // 禁用
+              },
+              insertStrategy: {  // 插入策略配置
+                  interval: 2,    // 每2个功能词插入1个其他词
+                  insertKeys: ['属性词'] // 要插入的字段名（按顺序）
+              },
+              order: ['植物名', '功能词', '属性词', '场景词', '促销词'],
+              maxLength: 30
+          });
           output.textContent = JSON.stringify(parsedData, null, 2);
           exportBtn.disabled = false;
         } catch (error) {

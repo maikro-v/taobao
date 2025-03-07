@@ -29,27 +29,12 @@ h1 {
     border-radius: 8px;
 }
 .rule-item {
-    margin-bottom: 15px;
-    padding: 10px;
-    border: 1px solid #eee;
-}
-
-.rule-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.config-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.checkbox {
-    margin-left: 15px;
+    background: #e7f5ff;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    transition: transform 0.2s;
 }
 .rule-item:hover {
     transform: translateY(-2px);
