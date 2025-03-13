@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>智能标题生成器</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        .container {
+            padding: 20px;
+        }
+        
+        .header {
+            background-color: #f5f7fa;
+            text-align: center;
+        }
+        
+        .main-content {
+            padding: 20px;
+        }
+        
+        .box-card {
+            margin-bottom: 20px;
+        }
+        
+        .upload-area {
+            margin: 20px 0;
+        }
+        
+        
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+        
+        .config-body {
+            margin-left: 20px;
+            padding: 10px 0;
+        }
+        
+        .number-input {
+            margin-top: 10px;
+        }
+        
+        .rule-item {
+            border-bottom: 1px solid #ebeef5;
+            padding: 15px 0;
+        }
+        
+        .rule-item:last-child {
+            border-bottom: none;
+        }
+        
+        .rule-container {
+            min-height: 50px;
+        }
+        
+        .rule-list-move {
+            transition: all 0.3s ease;
+        }
+        
+        
+        .el-radio-group {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .el-input-number {
+            width: 120px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .full-width-btn {
+            width: 100%;
+        }
+        
+        .el-upload__text {
+            color: #606266;
+            font-size: 14px;
+        }
+        
+        .el-upload__text em {
+            color: #409EFF;
+            font-style: normal;
+        }
+        
+        .result-card {
+        background-color: #333;
+        border-radius: 10px; 
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <el-container class="container">
+            <el-header class="header">
+                <h1>智能标题生成器</h1>
+            </el-header>
+            <el-main class="main-content">
+                <el-row :gutter="20">
+                    <el-col :span="12">
+                        <el-card class="box-card">
+                            <el-upload
+                                class="upload-area"
+                                drag
+                                :auto-upload="false"
+                                :show-file-list="false"
+                                :on-change="handleFileUpload"
+                                accept=".xlsx"
+                            >
+                                <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+                            </el-upload>
+                            <el-alert v-if="fileStatus" :title="fileStatus" type="success" :closable="false" />
+                        </el-card>
+        
+                        <el-card v-if="configReady" class="box-card config-card">
+                            <template #header>
+                                <span>组词规则配置</span>
+                            </template>
+                            <transition-group name="rule-list" tag="div" class="rule-container">
+                                <div class="rule-item" v-for="(rule, index) in ruleOrder" :key="rule.label">
+                                    <div class="config-header">
+                                        <el-tag size="large">{{ rule.label }}</el-tag>
+                                        <div class="button-group">
+                                            <el-button type="primary" :disabled="index === 0" @click="moveUp(index)">
+                                                <el-icon>上移</el-icon>
+                                            </el-button>
+                                            <el-button type="primary" :disabled="index === ruleOrder.length-1" @click="moveDown(index)">
+                                                <el-icon>下移</el-icon>
+                                            </el-button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="config-body">
+                                        <el-radio-group v-model="rule.type" @change="handleTypeChange(rule)">
+                                            <el-radio label="primary">主词</el-radio>
+                                            <el-radio label="fill">动态词</el-radio>
+                                            <el-radio label="number">数值选择</el-radio>
+                                        </el-radio-group>
+                                        
+                                        <div v-if="rule.type === 'number'" class="number-input">
+                                            <el-input-number 
+                                                v-model="rule.count" 
+                                                :min="1" 
+                                                :max="10"
+                                                controls-position="right"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </transition-group>
+                        </el-card>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-card v-if="dataLoaded" class="box-card action-card">
+                            <el-row :gutter="20">
+                                <el-col :span="12">
+                                    <el-button type="primary" @click="generate" class="full-width-btn">生成标题</el-button>
+                                </el-col>
+                                <el-col :span="12">
+                                    <el-button type="success" @click="exportExcel" class="full-width-btn">导出结果</el-button>
+                                </el-col>
+                            </el-row>
+                        </el-card>
+        
+                        <el-card v-if="titleList.length" class="box-card result-card">
+                            <template #header>
+                                <span>生成结果（{{ titleList.length }}条）</span>
+                            </template>
+                            <el-input
+                                v-model="resultText"
+                                type="textarea"
+                                :rows="10"
+                                placeholder="生成结果将显示在这里"
+                                readonly
+                            />
+                        </el-card>
+                    </el-col>
+                </el-row>
+            </el-main>
+        </el-container>
+    </div>
+
+<script src="./scripts/generateTitles-v4.js"></script>
+<script>
+const { createApp, ref, computed } = Vue;
+
+createApp({
+    setup() {
+        const fileStatus = ref('');
+        const dataLoaded = ref(false);
+        const configReady = ref(false);
+        const ruleOrder = ref([]);
+        const titleList = ref([]);
+        const excelDataMap = new Map();
+
+        const resultText = computed(() => titleList.value.join('\n'));
+
+        // 处理类型变化
+        const handleTypeChange = (changedRule) => {
+            if (['primary', 'fill'].includes(changedRule.type)) {
+                ruleOrder.value.forEach(rule => {
+                    if (rule.label !== changedRule.label) {
+                        if (rule.type === changedRule.type) {
+                            rule.type = 'number';
+                        }
+                    }
+                });
+            }
+        };
+
+        const handleFileUpload = (file) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+
+                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                const headers = jsonData[0];
+
+                headers.forEach((header, index) => {
+                    ruleOrder.value.push({
+                        label: header,
+                        type: index == 0 ? 'primary' : index == 1 ? 'fill' : 'number',
+                        count: 1
+                    })
+                    excelDataMap.set(header, [])
+                });
+                
+
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    headers.forEach((header, colIndex) => {
+                        const cellValue = row[colIndex];
+                        if (cellValue !== undefined) {
+                            const list = excelDataMap.get(header);
+                            list.push(cellValue.toString().trim());
+                            excelDataMap.set(header, list);
+                        }
+                    });
+                }
+
+                configReady.value = true;
+                dataLoaded.value = true;
+                fileStatus.value = '文件解析成功';
+            };
+            reader.readAsArrayBuffer(file.raw);
+        };
+
+        const moveUp = (index) => {
+            if (index > 0) {
+                const newOrder = [...ruleOrder.value];
+                [newOrder[index], newOrder[index-1]] = [newOrder[index-1], newOrder[index]];
+                ruleOrder.value = newOrder;
+            }
+        };
+
+        const moveDown = (index) => {
+            if (index < ruleOrder.value.length - 1) {
+                const newOrder = [...ruleOrder.value];
+                [newOrder[index], newOrder[index+1]] = [newOrder[index+1], newOrder[index]];
+                ruleOrder.value = newOrder;
+            }
+        };
+
+        const generate = () => {
+            const params = {
+                key: {},
+                order: [],
+                maxLength: 30,
+                insetRule: {
+                    number: 2,
+                    key: '属性词'
+                }
+            }
+
+            ruleOrder.value.forEach(rule => {
+                if (rule.type === 'number') {
+                    params.key[rule.label] = rule.count
+                } else {
+                    params.key[rule.label] = rule.type;
+                }
+
+                params.order.push(rule.label)
+            })
+
+            const titles = generateTitles(excelDataMap, params)
+
+            console.log(titles)
+
+            titleList.value = titles;
+        };
+
+        const exportExcel = () => {
+            const ws = XLSX.utils.aoa_to_sheet([["标题"], ...titleList.value.map(t => [t])]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "结果");
+            XLSX.writeFile(wb, '生成标题.xlsx');
+        };
+
+        return {
+            fileStatus,
+            dataLoaded,
+            configReady,
+            ruleOrder,
+            titleList,
+            resultText,
+            handleFileUpload,
+            moveUp,
+            moveDown,
+            generate,
+            exportExcel,
+            handleTypeChange
+        };
+    }
+}).use(ElementPlus).mount('#app');
+</script>
+
+</body>
+</html>

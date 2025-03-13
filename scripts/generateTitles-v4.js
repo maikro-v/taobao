@@ -1,29 +1,38 @@
-function generateTitles(data, {
-    key: keyConfig = { 
-        '植物名': 'primary',
-        '功能词': 'fill',
-        '属性词': 2,
-        '场景词': 1,
-        '促销词': 0
-    },
-    order = ['植物名', '功能词', '属性词', '场景词'],
+/**
+ * 根据给定的数据和配置生成标题列表。
+ * @param {Object} data - 包含用于生成标题的数据源对象。
+ * @param {Object} options - 配置选项对象。
+ * @param {Object} [options.key={}] - 键配置对象，指定不同类型的键及其权重。
+ * @param {Array} [options.order=[]] - 标题中各部分的排列顺序。
+ * @param {number} [options.maxLength=30] - 生成标题的最大长度。
+ * @param {Object} [options.insetRule] - 插入规则对象，用于在特定位置插入内容。
+ * @returns {Array} - 生成的标题列表。
+ */
+function generateTitles(source, {
+    key: keyConfig = {},
+    order = [],
     maxLength = 30,
-    insertStrategy = { 
-        interval: 2,    
-        insertKeys: ['属性词']
-    }
+    insetRule
 } = {}) {
+    const data = source instanceof Map ? Object.fromEntries(source) : source;
+
+    // 定义一个洗牌函数，用于随机打乱数组元素的顺序
     const shuffle = arr => arr.sort(() => Math.random() - 0.5);
+    // 定义一个去重函数，用于去除数组中的重复元素并过滤掉空值
     const unique = arr => [...new Set(arr)].filter(Boolean);
 
     // 解析核心配置
+    // 找到主关键字，即配置中值为 'primary' 的键
     const mainKey = Object.keys(keyConfig).find(k => keyConfig[k] === 'primary');
+    // 找到动态关键字，即配置中值为 'fill' 的键
     const dynamicKey = Object.keys(keyConfig).find(k => keyConfig[k] === 'fill');
+    // 找到静态关键字，即配置中值为正整数的键
     const staticKeys = Object.keys(keyConfig).filter(k => 
         typeof keyConfig[k] === 'number' && keyConfig[k] > 0
     );
     
     // 构建词库映射
+    // 为每个关键字创建一个唯一的词库数组
     const libraries = Object.fromEntries(
         [mainKey, dynamicKey, ...staticKeys].map(key => [
             key,
@@ -31,120 +40,108 @@ function generateTitles(data, {
         ])
     );
 
+    // 如果主关键字的词库为空，则返回空数组
     if (!libraries[mainKey]?.length) return [];
 
+    // 遍历主关键字的词库，为每个主关键字生成一个标题
     return libraries[mainKey].map(mainTerm => {
-        // 处理静态部分（保存原始数组）
+        // 处理静态部分（保持数组形式）
+        // 为每个静态关键字选择指定数量的元素
         const staticParts = Object.fromEntries(
             staticKeys.map(key => {
                 const count = keyConfig[key];
                 const available = libraries[key] || [];
                 const shuffled = shuffle(available);
-                return [key, shuffled.slice(0, count)]; // 保存数组而非字符串
+                // 保留为数组
+                return [key, shuffled.slice(0, count)]; 
             })
         );
 
         // 构建基础标题（预留动态空间）
         const baseParts = {
-            [mainKey]: mainTerm,
-            [dynamicKey]: '',
-            ...Object.fromEntries(
-                Object.entries(staticParts).map(([k, v]) => [k, v.join('')])
-            )
+            // 主键包装为数组
+            [mainKey]: [mainTerm], 
+            [dynamicKey]: [],
+            ...staticParts
         };
 
-        // 计算基础长度
+        // 计算基础长度（拼接数组元素）
         const baseStr = order
             .map(key => 
-                key === dynamicKey ? '' : baseParts[key] || ''
+                key === dynamicKey ? '' : (baseParts[key] || []).join('')
             )
             .join('');
         
+        // 计算剩余可用长度
         let remaining = maxLength - baseStr.length;
+
+        // 处理动态部分（保持数组形式）
         const selectedDynamic = [];
-        let insertIndex = 0;
-
-        // 准备插入词队列（深拷贝避免污染原始数据）
-        const insertQueue = insertStrategy.insertKeys
-            .flatMap(key => [...(staticParts[key] || [])])
-            .filter(Boolean);
-
-        // 处理动态部分（含插入逻辑）
+        // 如果动态关键字的词库不为空且还有剩余长度
         if (libraries[dynamicKey]?.length && remaining > 0) {
             const shuffled = shuffle([...libraries[dynamicKey]]);
             
+            // 遍历打乱后的动态词库
             for (const item of shuffled) {
+                // 如果剩余长度不足，则跳出循环
                 if (remaining <= 0) break;
 
-                // 执行插入策略
-                if (insertStrategy.interval > 0 
-                    && insertQueue.length > 0
-                    && selectedDynamic.length % (insertStrategy.interval + 1) === insertStrategy.interval
-                ) {
-                    const insertWord = insertQueue.shift();
-                    if (insertWord) {
-                        // 从对应静态字段中移除已插入的词
-                        insertStrategy.insertKeys.some(key => {
-                            const idx = staticParts[key]?.indexOf(insertWord);
-                            if (idx !== -1) {
-                                staticParts[key].splice(idx, 1);
-                                return true;
-                            }
-                            return false;
-                        });
-                        
-                        selectedDynamic.push(insertWord);
-                        remaining -= insertWord.length;
-                        if (remaining <= 0) break;
-                    }
-                }
-
-                // 添加功能词
                 const available = remaining >= item.length 
+                    // 如果剩余长度足够，则使用完整的元素
                     ? item 
+                    // 否则，截取部分元素
                     : item.substring(0, remaining);
+                
+                // 将选择的动态元素添加到数组中
                 selectedDynamic.push(available);
+                // 减少剩余长度
                 remaining -= available.length;
-            }
-
-            // 处理剩余插入词
-            while (insertQueue.length > 0 && remaining > 0) {
-                const insertWord = insertQueue.shift();
-                if (insertWord) {
-                    insertStrategy.insertKeys.some(key => {
-                        const idx = staticParts[key]?.indexOf(insertWord);
-                        if (idx !== -1) {
-                            staticParts[key].splice(idx, 1);
-                            return true;
-                        }
-                        return false;
-                    });
-                    
-                    if (insertWord.length <= remaining) {
-                        selectedDynamic.push(insertWord);
-                        remaining -= insertWord.length;
-                    } else {
-                        selectedDynamic.push(insertWord.substring(0, remaining));
-                        remaining = 0;
-                    }
-                }
             }
         }
 
-        // 组合最终标题（重新生成静态部分）
-        const finalStaticParts = Object.fromEntries(
-            Object.entries(staticParts).map(([k, v]) => [k, v.join('')])
-        );
-
+        // 组合最终标题（保留数组形式）
         const finalParts = {
-            [mainKey]: mainTerm,
-            [dynamicKey]: selectedDynamic.join(''),
-            ...finalStaticParts
+            [mainKey]: [mainTerm],
+            [dynamicKey]: selectedDynamic,
+            ...staticParts
         };
 
-        return order
-            .map(key => finalParts[key] || '')
-            .join('')
-            .substring(0, maxLength);
+
+        // 如果存在插入规则，并且规则指定的关键字有多个元素
+        if (insetRule && insetRule.key && finalParts[insetRule.key]?.length > 1) {
+            const list = []
+
+            // 遍历标题顺序
+            order.flatMap(key => {
+                if (key == dynamicKey) {
+                    // 遍历动态部分的元素
+                    for (let i = 0, len = finalParts[dynamicKey].length; i < len; i++) {
+                        const item = finalParts[dynamicKey][i]
+
+                        // 如果满足插入规则的条件
+                        if (finalParts[insetRule.key].length > 1 && i !== 0 && i % insetRule.number == 0) {
+                            // 插入规则指定的元素
+                            list.push(finalParts[insetRule.key].shift() + item)
+                            continue
+                        }
+
+                        list.push(item)
+                    }
+                } else {
+                    // 添加其他部分的元素
+                    list.push(...(finalParts[key] || []))
+                }
+            })
+
+            // 拼接并截取最终标题
+            return list.join('')
+                .substring(0, maxLength)
+        } else {
+            // 展开所有数组并拼接成最终字符串
+            return order
+                .flatMap(key => finalParts[key] || [])
+                .join('')
+                .substring(0, maxLength);
+        }
     });
 }
