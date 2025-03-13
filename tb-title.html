@@ -109,23 +109,23 @@
             <el-header class="header">
                 <h1>智能标题生成器</h1>
             </el-header>
+            
+            <el-card class="box-card">
+                <el-upload
+                    class="upload-area"
+                    drag
+                    :auto-upload="false"
+                    :show-file-list="false"
+                    :on-change="handleFileUpload"
+                    accept=".xlsx"
+                >
+                    <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+                </el-upload>
+                <el-alert v-if="fileStatus" :title="fileStatus" type="success" :closable="false" />
+            </el-card>
             <el-main class="main-content">
                 <el-row :gutter="20">
                     <el-col :span="12">
-                        <el-card class="box-card">
-                            <el-upload
-                                class="upload-area"
-                                drag
-                                :auto-upload="false"
-                                :show-file-list="false"
-                                :on-change="handleFileUpload"
-                                accept=".xlsx"
-                            >
-                                <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
-                            </el-upload>
-                            <el-alert v-if="fileStatus" :title="fileStatus" type="success" :closable="false" />
-                        </el-card>
-        
                         <el-card v-if="configReady" class="box-card config-card">
                             <template #header>
                                 <span>组词规则配置</span>
