@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>sku名称重新生成</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+</head>
+<body>
+    <div id="app">
+        <el-button type="primary" @click="readFile">读取文件</el-button>
+        <template v-if="fileStatus">
+            <el-button type="success" @click="exportExcel">复制结果</el-button>
+            <el-alert :title="fileStatus" type="success" :closable="false" />
+        </template>
+    </div>
+    
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
+    <script src="./scripts/xlsx-util.js"></script>
+    <script>
+        const { createApp, ref, computed } = Vue;
+        
+        createApp({
+            setup() {
+                const fileStatus = ref('');
+
+                const readFile = () => {
+                    readXlsxFile()
+                        .then(jsonData => {
+                            // 处理数据：在“颜色/口味名（可修改）”前加上“商品标题”
+                            const titles = {}
+                            for (let key in jsonData) {
+                                const item = jsonData[key]
+                                if (titles[item['商品ID']] || titles[item['商品id']]) {
+                                    continue
+                                }
+                                titles[item['商品ID']] = item['商品标题'].split('专用')[0].trim()
+                            }
+
+                            const processedData = jsonData.map(row => {
+                                const title = titles[row['商品ID']] || titles[row['商品id']]
+                                let modifiedFlavor = ''
+                                if (row['颜色/口味名（可修改）']) {
+                                    modifiedFlavor = `${title}${row['颜色/口味名（可修改）']}`.replace(/-.*$/, '');
+                                }
+
+                                return {
+                                    ...row,
+                                    '颜色/口味名（可修改）': modifiedFlavor
+                                };
+                            });
+
+                            fileStatus.value = '文件解析成功';
+                        })
+                        .catch(error => console.error('Error:', error));
+                }
+
+                return {
+                    fileStatus,
+                    readFile
+                }
+            }
+        }).use(ElementPlus).mount('#app');
+    </script>
+</body>
+</html>
