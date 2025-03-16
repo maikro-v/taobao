@@ -98,8 +98,8 @@
         }
         
         .result-card {
-        background-color: #333;
-        border-radius: 10px; 
+            background-color: #333;
+            border-radius: 10px; 
         }
     </style>
 </head>
@@ -171,6 +171,9 @@
                                     <el-button type="primary" @click="generate" class="full-width-btn">生成标题</el-button>
                                 </el-col>
                                 <el-col :span="12">
+                                    <el-button type="success" @click="handleCopy" class="full-width-btn">复制结果</el-button>
+                                </el-col>
+                                <el-col :span="12">
                                     <el-button type="success" @click="exportExcel" class="full-width-btn">导出结果</el-button>
                                 </el-col>
                             </el-row>
@@ -183,7 +186,7 @@
                             <el-input
                                 v-model="resultText"
                                 type="textarea"
-                                :rows="10"
+                                :rows="66"
                                 placeholder="生成结果将显示在这里"
                                 readonly
                             />
@@ -223,6 +226,9 @@ createApp({
         };
 
         const handleFileUpload = (file) => {
+            ruleOrder.value = []
+            excelDataMap.clear()
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 const data = new Uint8Array(e.target.result);
@@ -301,8 +307,6 @@ createApp({
 
             const titles = generateTitles(excelDataMap, params)
 
-            console.log(titles)
-
             titleList.value = titles;
         };
 
@@ -311,6 +315,14 @@ createApp({
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "结果");
             XLSX.writeFile(wb, '生成标题.xlsx');
+        };
+
+        const handleCopy = () => {
+            navigator.clipboard.writeText(resultText.value).then(() => {
+                alert('复制成功');
+            }).catch(err => {
+                console.error('复制失败', err);
+            });
         };
 
         return {
@@ -325,7 +337,8 @@ createApp({
             moveDown,
             generate,
             exportExcel,
-            handleTypeChange
+            handleTypeChange,
+            handleCopy
         };
     }
 }).use(ElementPlus).mount('#app');
