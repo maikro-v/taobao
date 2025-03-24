@@ -35,7 +35,7 @@ function readXlsxFile() {
                     });
                     resolve(jsonData);
                 } catch (error) {
-                    reject('Error parsing Excel file');
+                    reject(error);
                 }
             };
             
