@@ -3,8 +3,8 @@
 <head>
     <title>订单管理系统</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/element-plus@2.3.6/dist/index.full.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/element-plus@2.3.6/dist/index.css">
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <script src="https://unpkg.com/element-plus/dist/index.full.js"></script>
 </head>
 <body>
     <div id="app">
@@ -16,20 +16,20 @@
             
             <el-main>
                 <el-table :data="orders" border style="width: 100%">
-                    <el-table-column prop="单号" label="单号" width="200"></el-table-column>
-                    <el-table-column prop="金额" label="金额" width="120"></el-table-column>
+                    <el-table-column prop="order_id" label="单号" width="200"></el-table-column>
+                    <el-table-column prop="price" label="金额" width="120"></el-table-column>
                     <el-table-column prop="qq" label="QQ" width="150"></el-table-column>
-                    <el-table-column prop="微信" label="微信" width="150"></el-table-column>
-                    <el-table-column prop="创建时间" label="创建时间" width="150"></el-table-column>
-                    <el-table-column prop="店铺名" label="店铺名" width="150"></el-table-column>
-                    <el-table-column prop="状态" label="状态" width="120">
+                    <el-table-column prop="wechat" label="微信" width="150"></el-table-column>
+                    <el-table-column prop="create_time" label="创建时间" width="150"></el-table-column>
+                    <el-table-column prop="shop_name" label="店铺名" width="150"></el-table-column>
+                    <el-table-column prop="status" label="状态" width="120">
                         <template #default="scope">
                             <el-tag :type="scope.row.状态 === '待支付' ? 'danger' : 'warning'">
                                 {{ scope.row.状态 }}
                             </el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column prop="备注" label="备注"></el-table-column>
+                    <el-table-column prop="remark" label="备注"></el-table-column>
                     <el-table-column label="操作" width="150">
                         <template #default="scope">
                             <el-button type="primary" @click="handleEdit(scope.row)">编辑</el-button>
@@ -44,32 +44,32 @@
         <el-dialog v-model="dialogVisible" title="编辑订单">
             <el-form :model="formData" label-width="120px">
                 <el-form-item label="单号">
-                    <el-input v-model="formData.单号" disabled />
+                    <el-input v-model="formData.order_id" />
                 </el-form-item>
                 <el-form-item label="金额">
-                    <el-input v-model="formData.金额" type="number" />
+                    <el-input v-model="formData.price" type="number" />
                 </el-form-item>
                 <el-form-item label="QQ">
                     <el-input v-model="formData.qq" />
                 </el-form-item>
                 <el-form-item label="微信">
-                    <el-input v-model="formData.微信" />
+                    <el-input v-model="formData.wechat" />
                 </el-form-item>
                 <el-form-item label="创建时间">
-                    <el-date-picker v-model="formData.创建时间" type="date" format="MM/DD/YY" />
+                    <el-date-picker v-model="formData.create_time" type="date" format="MM/DD/YY" />
                 </el-form-item>
                 <el-form-item label="店铺名">
-                    <el-input v-model="formData.店铺名" />
+                    <el-input v-model="formData.shop_name" />
                 </el-form-item>
                 <el-form-item label="状态">
-                    <el-select v-model="formData.状态">
+                    <el-select v-model="formData.status">
                         <el-option label="待支付" value="待支付" />
                         <el-option label="待返款" value="待返款" />
                         <el-option label="已完成" value="已完成" />
                     </el-select>
                 </el-form-item>
                 <el-form-item label="备注">
-                    <el-input v-model="formData.备注" type="textarea" />
+                    <el-input v-model="formData.remark" type="textarea" />
                 </el-form-item>
             </el-form>
             <template #footer>
@@ -162,14 +162,14 @@
 
                 const handleAdd = () => {
                     formData.value = {
-                        单号: Math.random().toString(36).substr(2, 10),
-                        金额: 0,
-                        qq: '',
-                        微信: '',
-                        创建时间: new Date().toLocaleDateString('en-US'),
-                        店铺名: '',
-                        状态: '待支付',
-                        备注: ''
+                        "order_id": "",
+                        "price": "",
+                        "qq": "",
+                        "wechat": "",
+                        "create_time": new Date().toLocaleDateString('en-US'),
+                        "shop_name": "",
+                        "status": "",
+                        "remark": ""
                     };
                     dialogVisible.value = true;
                 };
