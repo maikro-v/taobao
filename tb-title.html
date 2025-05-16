@@ -128,6 +128,28 @@
                     <el-col :span="12">
                         <el-card v-if="configReady" class="box-card config-card">
                             <template #header>
+                                <span>插入规则配置</span>
+                            </template>
+                            <div class="config-body">
+                                <el-form label-position="top">
+                                    <el-form-item label="间隔次数（动态词出现多少个时插入一个）">
+                                        <el-input-number v-model="insetRule.number" :min="1" :max="10" controls-position="right" />
+                                    </el-form-item>
+                                    <el-form-item label="插入字段">
+                                        <el-select v-model="insetRule.key" placeholder="请选择">
+                                            <el-option
+                                                v-for="rule in ruleOrder"
+                                                :key="rule.label"
+                                                :label="rule.label"
+                                                :value="rule.label"
+                                            />
+                                        </el-select>
+                                    </el-form-item>
+                                </el-form>
+                            </div>
+                        </el-card>
+                        <el-card v-if="configReady" class="box-card config-card">
+                            <template #header>
                                 <span>组词规则配置</span>
                             </template>
                             <transition-group name="rule-list" tag="div" class="rule-container">
@@ -209,6 +231,10 @@ createApp({
         const ruleOrder = ref([]);
         const titleList = ref([]);
         const excelDataMap = new Map();
+        const insetRule = ref({
+            number: 1,
+            key: ''
+        });
 
         const resultText = computed(() => titleList.value.join('\n'));
 
@@ -260,6 +286,9 @@ createApp({
                         }
                     });
                 }
+                if (headers.length > 0) {
+                    insetRule.value.key = headers[0];
+                }
 
                 configReady.value = true;
                 dataLoaded.value = true;
@@ -290,8 +319,8 @@ createApp({
                 order: [],
                 maxLength: 30,
                 insetRule: {
-                    number: 2,
-                    key: '属性词'
+                    number: insetRule.value.number,
+                    key: insetRule.value.key
                 }
             }
 
@@ -332,6 +361,7 @@ createApp({
             ruleOrder,
             titleList,
             resultText,
+            insetRule, // 新增
             handleFileUpload,
             moveUp,
             moveDown,

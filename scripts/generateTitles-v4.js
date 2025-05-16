@@ -106,6 +106,8 @@ function generateTitles(source, {
             ...staticParts
         };
 
+        console.log(finalParts, insetRule)
+
 
         // 如果存在插入规则，并且规则指定的关键字有多个元素
         if (insetRule && insetRule.key && finalParts[insetRule.key]?.length > 1) {
